@@ -60,6 +60,9 @@ import androidx.media3.common.util.Clock;
 import androidx.media3.common.util.Log;
 import androidx.media3.common.util.Util;
 import androidx.media3.datasource.DataSourceBitmapLoader;
+import androidx.media3.demo.transformer.overlay.BgOverlay;
+import androidx.media3.demo.transformer.overlay.ChatContentOverlay;
+import androidx.media3.demo.transformer.overlay.TransformerConstant;
 import androidx.media3.effect.BitmapOverlay;
 import androidx.media3.effect.Contrast;
 import androidx.media3.effect.DebugTraceUtil;
@@ -385,8 +388,8 @@ public final class TransformerActivity extends AppCompatActivity {
   })
   private Composition createComposition(MediaItem mediaItem, @Nullable Bundle bundle) {
     EditedMediaItem.Builder editedMediaItemBuilder = new EditedMediaItem.Builder(mediaItem);
-    // For image inputs. Automatically ignored if input is audio/video.
-    editedMediaItemBuilder.setDurationUs(5_000_000).setFrameRate(30);
+    //TODO beyond For image inputs. Automatically ignored if input is audio/video.
+    editedMediaItemBuilder.setDurationUs(10_000_000).setFrameRate(TransformerConstant.FRAME_RATE);
     if (bundle != null) {
       ImmutableList<AudioProcessor> audioProcessors = createAudioProcessorsFromBundle(bundle);
       ImmutableList<Effect> videoEffects = createVideoEffectsFromBundle(bundle);
@@ -616,7 +619,9 @@ public final class TransformerActivity extends AppCompatActivity {
     if (resolutionHeight != C.LENGTH_UNSET) {
       effects.add(Presentation.createForHeight(resolutionHeight));
     }
-
+    //TODO 剪裁视频
+//    Crop cropEffect = new Crop(-0.5f, 0.5f, -0.5f, 0.5f);
+//    effects.add(cropEffect);
     return effects.build();
   }
 
@@ -674,7 +679,10 @@ public final class TransformerActivity extends AppCompatActivity {
       TextOverlay textOverlay = TextOverlay.createStaticTextOverlay(overlayText, overlaySettings);
       overlaysBuilder.add(textOverlay);
     }
-
+    //TODO 新增
+    overlaysBuilder.add(new ChatContentOverlay());
+    BgOverlay bgOverlay = new BgOverlay(this);
+    overlaysBuilder.add(bgOverlay);
     ImmutableList<TextureOverlay> overlays = overlaysBuilder.build();
     return overlays.isEmpty() ? null : new OverlayEffect(overlays);
   }
