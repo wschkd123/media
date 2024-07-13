@@ -17,6 +17,7 @@ package androidx.media3.demo.transformer;
 
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.READ_MEDIA_VIDEO;
+import static androidx.media3.common.MimeTypes.VIDEO_H264;
 import static androidx.media3.common.util.Assertions.checkNotNull;
 import static androidx.media3.common.util.Assertions.checkState;
 import static androidx.media3.common.util.Util.SDK_INT;
@@ -50,6 +51,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.media3.common.C;
 import androidx.media3.common.DebugViewProvider;
 import androidx.media3.common.Effect;
+import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.audio.AudioProcessor;
 import androidx.media3.common.audio.ChannelMixingAudioProcessor;
@@ -244,7 +246,8 @@ public final class TransformerActivity extends AppCompatActivity {
     @Nullable Bundle bundle = intent.getExtras();
     MediaItem mediaItem = createMediaItem(bundle, inputUri);
     Transformer transformer = createTransformer(bundle, inputUri, outputFilePath);
-    Composition composition = createComposition(mediaItem, bundle);
+//    Composition composition = createComposition(mediaItem, bundle);
+    Composition composition = compositionEditing_withThreeSequences_completes();
     exportStopwatch.reset();
     exportStopwatch.start();
     if (oldOutputFile == null) {
@@ -290,8 +293,27 @@ public final class TransformerActivity extends AppCompatActivity {
       if (trimStartMs != C.TIME_UNSET && trimEndMs != C.TIME_UNSET) {
         mediaItemBuilder.setClippingConfiguration(
             new MediaItem.ClippingConfiguration.Builder()
-                .setStartPositionMs(trimStartMs)
-                .setEndPositionMs(trimEndMs)
+                .setStartPositionMs(0)
+                .setEndPositionMs(10_000_000)
+                .build());
+      }
+    }
+    return mediaItemBuilder.build();
+  }
+
+  private MediaItem createAudioMediaItem(@Nullable Bundle bundle) {
+    String uri = getExternalFilesDir(null) + "/test.mp3";
+    MediaItem.Builder mediaItemBuilder = new MediaItem.Builder().setMediaId("test").setUri(uri);
+    if (bundle != null) {
+      long trimStartMs =
+          bundle.getLong(ConfigurationActivity.TRIM_START_MS, /* defaultValue= */ C.TIME_UNSET);
+      long trimEndMs =
+          bundle.getLong(ConfigurationActivity.TRIM_END_MS, /* defaultValue= */ C.TIME_UNSET);
+      if (trimStartMs != C.TIME_UNSET && trimEndMs != C.TIME_UNSET) {
+        mediaItemBuilder.setClippingConfiguration(
+            new MediaItem.ClippingConfiguration.Builder()
+                .setStartPositionMs(0)
+                .setEndPositionMs(10_000_000)
                 .build());
       }
     }
@@ -390,25 +412,118 @@ public final class TransformerActivity extends AppCompatActivity {
     EditedMediaItem.Builder editedMediaItemBuilder = new EditedMediaItem.Builder(mediaItem);
     //TODO beyond For image inputs. Automatically ignored if input is audio/video.
     editedMediaItemBuilder.setDurationUs(10_000_000).setFrameRate(TransformerConstant.FRAME_RATE);
-    if (bundle != null) {
-      ImmutableList<AudioProcessor> audioProcessors = createAudioProcessorsFromBundle(bundle);
-      ImmutableList<Effect> videoEffects = createVideoEffectsFromBundle(bundle);
-      editedMediaItemBuilder
-          .setRemoveAudio(bundle.getBoolean(ConfigurationActivity.SHOULD_REMOVE_AUDIO))
-          .setRemoveVideo(bundle.getBoolean(ConfigurationActivity.SHOULD_REMOVE_VIDEO))
-          .setFlattenForSlowMotion(
-              bundle.getBoolean(ConfigurationActivity.SHOULD_FLATTEN_FOR_SLOW_MOTION))
-          .setEffects(new Effects(audioProcessors, videoEffects));
-    }
+
+    EditedMediaItem.Builder audioItem = new EditedMediaItem.Builder(createAudioMediaItem(bundle));
     Composition.Builder compositionBuilder =
-        new Composition.Builder(new EditedMediaItemSequence(editedMediaItemBuilder.build()));
-    if (bundle != null) {
-      compositionBuilder
-          .setHdrMode(bundle.getInt(ConfigurationActivity.HDR_MODE))
-          .experimentalSetForceAudioTrack(
-              bundle.getBoolean(ConfigurationActivity.FORCE_AUDIO_TRACK));
-    }
+        new Composition.Builder(new EditedMediaItemSequence(audioItem.build(), editedMediaItemBuilder.build()));
+
     return compositionBuilder.build();
+  }
+
+
+  public static final String MP4_ASSET_URI_STRING = "asset:///media/mp4/sample.mp4";
+  public static final String MP4_ASSET_URI_STRING1 = "asset:///media/mp4/hdr10-720p.mp4";
+  public static final String FILE_AUDIO_ONLY = "asset:///media/mp3/test-cbr-info-header.mp3";
+  public static final Format MP4_ASSET_FORMAT =
+      new Format.Builder()
+          .setSampleMimeType(VIDEO_H264)
+          .setWidth(1080)
+          .setHeight(720)
+          .setFrameRate(29.97f)
+          .setCodecs("avc1.64001F")
+          .build();
+  public Composition compositionEditing_withThreeSequences_completes() {
+//    String testId = "compositionEditing_withThreeSequences_completes";
+//    Transformer transformer = new Transformer.Builder(context).build();
+//    if (AndroidTestUtil.skipAndLogIfFormatsUnsupported(
+//        context,
+//        testId,
+//        /* inputFormat= */ MP4_ASSET_FORMAT,
+//        /* outputFormat= */ MP4_ASSET_FORMAT)) {
+//      return;
+//    }
+    EditedMediaItem audioVideoItem =
+        new EditedMediaItem.Builder(MediaItem.fromUri(MP4_ASSET_URI_STRING))
+//            .setEffects(
+//                new Effects(
+//                    ImmutableList.of(createSonic(/* pitch= */ 2f)),
+//                    ImmutableList.of(RgbFilter.createInvertedFilter())))
+//            .setRemoveVideo(true)
+            .build();
+    EditedMediaItem audioVideoItem1 =
+        new EditedMediaItem.Builder(MediaItem.fromUri(MP4_ASSET_URI_STRING1))
+//            .setEffects(
+//                new Effects(
+//                    ImmutableList.of(createSonic(/* pitch= */ 2f)),
+//                    ImmutableList.of(RgbFilter.createInvertedFilter())))
+//            .setRemoveVideo(true)
+            .build();
+    String JPG_ASSET_URI_STRING = "asset:///media/jpeg/london.jpg";
+    EditedMediaItem imageItem =
+        new EditedMediaItem.Builder(MediaItem.fromUri(JPG_ASSET_URI_STRING))
+            .setDurationUs(1_500_000)
+            .setFrameRate(30)
+            .setEffects(
+                new Effects(
+                    ImmutableList.of(createSonic(/* pitch= */ 1.3f)),
+                    /* videoEffects= */ ImmutableList.of()))
+            .build();
+
+    EditedMediaItemSequence audioVideoSequence =
+        new EditedMediaItemSequence(imageItem, audioVideoItem, audioVideoItem1);
+
+    EditedMediaItem.Builder audioBuilder =
+        new EditedMediaItem.Builder(MediaItem.fromUri(MP4_ASSET_URI_STRING)).setRemoveVideo(true);
+
+    EditedMediaItemSequence audioSequence =
+        new EditedMediaItemSequence(
+            audioBuilder
+                .setEffects(
+                    new Effects(
+                        ImmutableList.of(createSonic(/* pitch= */ 1.3f)),
+                        /* videoEffects= */ ImmutableList.of()))
+                .build(),
+            audioBuilder
+                .setEffects(
+                    new Effects(
+                        ImmutableList.of(createSonic(/* pitch= */ 0.85f)),
+                        /* videoEffects= */ ImmutableList.of()))
+                .build());
+
+    EditedMediaItemSequence loopingAudioSequence =
+        new EditedMediaItemSequence(
+            ImmutableList.of(
+                audioBuilder
+                    .setEffects(
+                        new Effects(
+                            ImmutableList.of(createSonic(/* pitch= */ 0.4f)),
+                            /* videoEffects= */ ImmutableList.of()))
+                    .build()),
+            /* isLooping= */ true);
+
+    Composition composition =
+        new Composition.Builder(audioVideoSequence/*, audioSequence, loopingAudioSequence*/)
+            .experimentalSetForceAudioTrack(true)
+            .build(); //TODO beyond 多个序列，什么样子的
+
+//    ExportTestResult result =
+//        new TransformerAndroidTestRunner.Builder(context, transformer)
+//            .build()
+//            .run(testId, composition);
+
+    // MP4_ASSET duration is ~1s.
+    // Image asset duration is ~1.5s.
+    // audioVideoSequence duration: ~3.5s (3 inputs).
+    // audioSequence duration: ~2s (2 inputs).
+    // loopingAudioSequence: Matches max other sequence (~3.5s) -> 4 inputs of ~1s audio item.
+//    assertThat(result.exportResult.processedInputs).hasSize(9);
+    return composition;
+  }
+
+  private static AudioProcessor createSonic(float pitch) {
+    SonicAudioProcessor sonic = new SonicAudioProcessor();
+    sonic.setPitch(pitch);
+    return sonic;
   }
 
   private ImmutableList<AudioProcessor> createAudioProcessorsFromBundle(Bundle bundle) {

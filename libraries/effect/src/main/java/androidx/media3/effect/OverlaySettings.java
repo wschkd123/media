@@ -32,7 +32,7 @@ public final class OverlaySettings {
   public final float alphaScale;
   public final Pair<Float, Float> backgroundFrameAnchor;
   public final Pair<Float, Float> overlayFrameAnchor;
-  public final Pair<Float, Float> scale;
+  public Pair<Float, Float> scale;
   public final float rotationDegrees;
 
   private OverlaySettings(
